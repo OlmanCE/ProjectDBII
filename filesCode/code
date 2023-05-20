@@ -1,0 +1,595 @@
+import pandas as pd
+import pyodbc
+
+def valida_datos(tipo_dato_actual,row_list,  i):
+    if tipo_dato_actual == "float64":      
+        row_list[i] = 0.0
+    if tipo_dato_actual == "float":
+        row_list[i] = 0.0
+    if tipo_dato_actual == "float32":
+        row_list[i] = 0.0
+    if tipo_dato_actual == "int64":
+        row_list[i] = 0
+    if tipo_dato_actual == "object":
+        row_list[i] = "NaN"
+    return row_list
+
+
+def insert_credit_card_balance(cursor,df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():  
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)
+        cursor.execute(f'''
+            INSERT INTO amounts (amt_balance, amt_credit_limit_actual, amt_drawings_atm_current, amt_drawings_current,
+            amt_drawings_other_current, amt_drawings_pos_current, amt_inst_min_regularity,
+            amt_payment_current, amt_payment_total_current, amt_receivable_principal, amt_recivable, amt_total_receivable)
+            VALUES (?, ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?) 
+        ''', row_new[4:16])
+        cursor.execute(f'''
+            INSERT INTO credit_card_balance (id_prestamo_previo, id_prestamo_actual, id_amounts, mounths_balance, 
+            cnt_drawings_atm_current, cnt_drawings_current, cnt_drawings_other_current, cnt_drawings_pos_current, 
+            cnt_instalment_mature_cum, name_contract_status, sk_dpd, sk_dpd_def)
+            VALUES (?, ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?)
+        ''', row_new[1], row_new[2], foreigh, row_new[3], row_new[16], row_new[17], row_new[18], row_new[19], row_new[20], row_new[21], row_new[22], row_new[23])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+
+def insert_previous_application(cursor, df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():  
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            if row_list[i] == "N":
+                row_list[i] = 0
+            if row_list[i] == "Y":
+                row_list[i] = 1
+            if row_list[i] == "Yes":
+                row_list[i] = 1
+            if row_list[i] == "No":
+                row_list[i] = 0
+            if row_list[37] == "0.0":
+                row_list[37] = 0
+            if row_list[37] == "1.0":
+                row_list[37] = 1
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)
+        #print(row_new[1:38])
+        cursor.execute(f'''
+            INSERT INTO previus_application (id_prestamo_previo, id_prestamo_actual, 
+            name_contract_type, amt_annuity, amt_application, amt_credit, amt_down_payment, 
+            amt_goods_price, week_day_appr_process_start, hour_appr_process_start, 
+            flag_last_appl_per_contract, nflag_last_appl_in_day, rate_down_payment, rate_interest_primary, 
+            rate_interest_privileged, name_cash_loan_purpose, name_contract_status, days_decision, name_payment_type, 
+            code_reject_reason, name_type_suite, name_client_type, name_goods_category, name_portfolio, 
+            name_product_type, channel_type, sellerplace_area, name_seller_industry, cnt_payment, name_yield_group, 
+            product_combination, days_first_drawing, days_first_due, days_last_due_1st_version, days_last_due, 
+            days_termination, nflag_insured_on_approval) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? , ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', row_new[1:38])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+def insert_pos_cash_balance(cursor, df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():  
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)
+        cursor.execute(f'''
+            INSERT INTO pos_cash_balance (id_prestamo_previo, id_prestamo_actual, months_balance, cnt_instalment, cnt_instalment_future, name_contract_status, sk_dpd, sk_dpd_def)
+            VALUES (?, ? ,? ,? ,? ,? ,? ,?)
+        ''', row_new[1:9])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+
+def insert_installments_payments(cursor, df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():  
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)   
+        cursor.execute(f'''
+                INSERT INTO installments_payments (id_prestamo_previo, id_prestamo_actual, num_instalment_version,
+                num_instalment_number, days_instalment, days_entry_payment, amt_instalment, amt_payment)
+                VALUES (?, ? ,? ,? ,? ,? ,? ,?)
+            ''', row_new[1:9])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+def insert_bureau(cursor, df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():  
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)
+        cursor.execute(f'''
+            INSERT INTO bureau (id_prestamo, credit_active, credit_currency, days_credit, credit_day_overdue, 
+            days_credit_enddate, days_enddate_fact, amt_credit_max_overdue, cnt_credit_prolong, amt_credit_sum, 
+            amt_credit_sum_debt, amt_credit_sum_limit, amt_credit_sum_overdue, credit_type, days_credit_update, 
+            amt_annuity)
+            VALUES (?, ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?, ? )
+        ''', foreigh, row_new[3], row_new[4], row_new[5], row_new[6], row_new[7], row_new[8], row_new[9], row_new[10], row_new[11], row_new[12], row_new[13], row_new[14], row_new[15], row_new[16], row_new[17])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+def insert_bureau_balance(cursor, df):
+    foreigh = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():
+        row_list = list(row)
+        for i, value in enumerate(row_list):
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+        row_new = tuple(row_list)
+        cursor.execute(f'''
+            INSERT INTO bureau_balance (id_bureau, months_balance, status)
+            VALUES (?, ? ,?) 
+            ''', foreigh, row_new[2], row_new[3])
+        foreigh = foreigh + 1
+        if foreigh == 100:
+            break
+def insert_application_train(cursor, df):
+    count = 1
+    tipos_datos = df.dtypes
+    for row in df.itertuples():
+        row_list = list(row)
+        for i, value in enumerate(row_list):    
+            if row_list[i] == "N":
+                row_list[i] = 0
+            if row_list[i] == "Y":
+                row_list[i] = 1
+            if row_list[i] == "Yes":
+                row_list[i] = 1
+            if row_list[i] == "No":
+                row_list[i] = 0
+            columna_actual = df.columns[i-1]
+            tipo_dato_actual = tipos_datos[columna_actual]
+            if pd.isna(value):
+                row_list[91] = 0
+                #print(row_list[i])
+                row_list = valida_datos(tipo_dato_actual,row_list,  i)
+                
+        row_new = tuple(row_list)
+        #print(row_new)
+        cursor.execute(f'''
+        INSERT INTO info_validada (flag_mobil, flag_emp_phone, flag_work_phone, flag_cont_mobile, flag_phone, flag_email)
+        VALUES (?, ? ,? ,? ,? ,? )
+        ''', row[23:29])
+        cursor.execute(f'''
+        INSERT INTO info_region (region_population_relative, region_rating_client, region_rating_client_w_city, reg_region_not_live_region, reg_region_not_work_region, live_region_not_work_region, reg_city_not_live_city, reg_city_not_work_city, live_city_not_work_city)
+        VALUES (?, ? ,? ,? ,? ,? ,? ,? ,?)
+        ''', row_new[17], row_new[31], row_new[32], row_new[35], row_new[36], row_new[37], row_new[38], row_new[39], row_new[40])     
+        cursor.execute(f'''
+        INSERT documentos (flag_document_2, flag_document_3, flag_document_4, flag_document_5, flag_document_6, flag_document_7, flag_document_8, flag_document_9, flag_document_10, flag_document_11, flag_document_12, flag_document_13, flag_document_14, flag_document_15, flag_document_16, flag_document_17, flag_document_18, flag_document_19, flag_document_20, flag_document_21)
+        VALUES (?, ? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,? ,?, ?, ?)
+        ''', row[97:117])
+        cursor.execute(f'''
+        INSERT INTO info_building (apartments_avg, basementarea_avg, years_beginexpluatation_avg, years_build_avg, 
+        commonarea_avg, elevators_avg, entrances_avg, floorsmax_avg, floorsmin_avg, landarea_avg, livingapartments_avg, 
+        livingarea_avg, nonlivingapartments_avg, nonlivingarea_avg, apartments_mode, basementarea_mode, 
+        years_beginexpluatation_mode, years_build_mode, commonarea_mode, elevators_mode, entrances_mode, 
+        floorsmax_mode, floorsmin_mode, landarea_mode, livingapartments_mode, livingarea_mode, nonlivingapartments_mode, 
+        nonlivingarea_mode, apartments_medi, basementarea_medi, years_beginexpluatation_medi, years_build_medi, 
+        commonarea_medi, elevators_medi, entrances_medi, floorsmax_medi, floorsmin_medi, landarea_medi, 
+        livingapartments_medi, livingarea_medi, nonlivingapartments_medi, nonlivingarea_medi, housetype_mode, 
+        totalarea_mode, wallsmaterial_mode)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?,?, ?, ?, ?, ?)
+        ''', row_new[45], row_new[46], row_new[47], row_new[48], row_new[49], row_new[50], row_new[51], row_new[52], row_new[53], row_new[54], row_new[55], row_new[56], row_new[57], row_new[58], row_new[59], row_new[60], row_new[61], row_new[62], row_new[63], row_new[64], row_new[65], row_new[66], row_new[67], row_new[68], row_new[69], row_new[70], row_new[71], row_new[72], row_new[73], row_new[74], row_new[75], row_new[76], row_new[77], row_new[78], row_new[79], row_new[80], row_new[81], row_new[82], row_new[83], row_new[84], row_new[85], row_new[86], row_new[88], row_new[89], row_new[90])
+        cursor.execute(f'''
+        INSERT INTO req_credit_bureau ( amt_req_credit_bureau_hour, amt_req_credit_bureau_day, amt_req_credit_bureau_week, amt_req_credit_bureau_mon, amt_req_credit_bureau_qrt, amt_req_credit_bureau_year)
+        VALUES (?, ? ,? ,? ,? ,?) 
+        ''', row_new[117:123])    
+        cursor.execute(f'''
+        INSERT INTO puntuaciones_externas (ext_source_1, ext_source_2, ext_source_3)
+        VALUES (?, ? ,? )
+        ''', row_new[42:45])         
+        cursor.execute(f'''
+        INSERT INTO cliente (id_info_building, id_documentos, id_req_credit_bureau, id_info_region, id_puntuaciones_externas, id_info_validada,
+        target, code_gender, flag_own_car, flag_own_realty, cnt_children, amt_income_total, name_type_suite, 
+        name_income_type, name_education_type, name_family_status, name_housing_type, days_birth, days_employed,
+        days_registration, days_id_publish, own_car_age, occupation_type, cnt_fam_members, organization_type, days_last_phone_change)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ''', count, count, count, count, count, count, row_new[2], row_new[4], row_new[5], row_new[6], row_new[7], row_new[8],row_new[12] ,row_new[13], row_new[14], row_new[15], row_new[16], row_new[18], row_new[19], row_new[20], row_new[21], row_new[22], row_new[29], row_new[30], row_new[41], row_new[96])
+        cursor.execute(f'''
+        INSERT INTO prestamo (name_contract_type, amt_credit, amt_annuity, amt_goods_price, week_day_appr_process_start, hour_appr_process_start, fondkapremont_mode, emergencystate_mode, id_cliente)
+        VALUES (?, ? ,? ,? ,? ,? ,? ,? ,?)
+        ''', row_new[3], row_new[9], row_new[10], row_new[11], row_new[33], row_new[34], row_new[87], row_new[91], count)
+        #print(row._fields)     
+        count = count + 1
+        if count == 100:
+            break        
+
+def tablas_application_train(cursor):
+        cursor.execute('''
+        CREATE TABLE info_validada (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        flag_mobil VARCHAR(5),
+        flag_emp_phone VARCHAR(5),
+        flag_work_phone VARCHAR(5),
+        flag_cont_mobile VARCHAR(5),
+        flag_phone VARCHAR(5),
+        flag_email VARCHAR(5)
+        )''')
+        cursor.execute('''
+        CREATE TABLE info_region (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        region_population_relative NUMERIC(22,20),
+        region_rating_client SMALLINT,
+        region_rating_client_w_city SMALLINT,
+        reg_region_not_live_region BIT,
+        reg_region_not_work_region BIT,
+        live_region_not_work_region BIT,
+        reg_city_not_live_city BIT,
+        reg_city_not_work_city BIT,
+        live_city_not_work_city BIT
+        )''')
+        cursor.execute('''
+        CREATE TABLE info_building (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        apartments_avg NUMERIC(8,6),
+        basementarea_avg FLOAT, 
+        years_beginexpluatation_avg FLOAT,   
+        years_build_avg FLOAT,
+        commonarea_avg FLOAT,
+        elevators_avg FLOAT,
+        entrances_avg FLOAT,
+        floorsmax_avg FLOAT,
+        floorsmin_avg FLOAT,
+        landarea_avg FLOAT,
+        livingapartments_avg FLOAT,
+        livingarea_avg FLOAT,
+        nonlivingapartments_avg FLOAT,
+        nonlivingarea_avg NUMERIC(8,6),
+        apartments_mode NUMERIC(8,6),
+        basementarea_mode NUMERIC(8,6),
+        years_beginexpluatation_mode NUMERIC(8,6),
+        years_build_mode NUMERIC(8,6),
+        commonarea_mode NUMERIC(8,6),
+        elevators_mode NUMERIC(8,6),
+        entrances_mode NUMERIC(8,6),
+        floorsmax_mode NUMERIC(8,6),
+        floorsmin_mode NUMERIC(8,6),
+        landarea_mode NUMERIC(8,6),
+        livingapartments_mode NUMERIC(8,6),
+        livingarea_mode NUMERIC(8,6),
+        nonlivingapartments_mode NUMERIC(8,6),
+        nonlivingarea_mode NUMERIC(8,6),
+        apartments_medi NUMERIC(8,6),
+        basementarea_medi NUMERIC(8,6),
+        years_beginexpluatation_medi NUMERIC(8,6),
+        years_build_medi NUMERIC(8,6),
+        commonarea_medi NUMERIC(8,6),
+        elevators_medi NUMERIC(8,6),
+        entrances_medi NUMERIC(8,6),
+        floorsmax_medi NUMERIC(8,6),
+        floorsmin_medi NUMERIC(8,6),
+        landarea_medi NUMERIC(8,6),
+        livingapartments_medi NUMERIC(8,6),
+        livingarea_medi NUMERIC(8,6),
+        nonlivingapartments_medi NUMERIC(8,6),
+        nonlivingarea_medi NUMERIC(8,6),
+        housetype_mode VARCHAR(21),
+        totalarea_mode NUMERIC(8,6),
+        wallsmaterial_mode VARCHAR(20)
+        )''')   
+        cursor.execute('''
+        CREATE TABLE req_credit_bureau (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        amt_req_credit_bureau_hour NUMERIC(6,2),  
+        amt_req_credit_bureau_day NUMERIC(6,2),
+        amt_req_credit_bureau_week NUMERIC(6,2),
+        amt_req_credit_bureau_mon NUMERIC(6,2),
+        amt_req_credit_bureau_qrt NUMERIC(6,2),
+        amt_req_credit_bureau_year NUMERIC(6,2)
+        )''')    
+
+        cursor.execute('''
+        CREATE TABLE documentos (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        flag_document_2 BIT,
+        flag_document_3 BIT,
+        flag_document_4 BIT,
+        flag_document_5 BIT,
+        flag_document_6 BIT,
+        flag_document_7 BIT,
+        flag_document_8 BIT,
+        flag_document_9 BIT,
+        flag_document_10 BIT,
+        flag_document_11 BIT,
+        flag_document_12 BIT,
+        flag_document_13 BIT,
+        flag_document_14 BIT,
+        flag_document_15 BIT,
+        flag_document_16 BIT,
+        flag_document_17 BIT,
+        flag_document_18 BIT,
+        flag_document_19 BIT,
+        flag_document_20 BIT,
+        flag_document_21 BIT
+        )''')
+        cursor.execute('''
+        CREATE TABLE puntuaciones_externas (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        ext_source_1 FLOAT,
+        ext_source_2 FLOAT,
+        ext_source_3 FLOAT
+        )''')            
+        cursor.execute('''
+        CREATE TABLE cliente (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        id_info_building INT,
+        id_documentos INT,
+        id_req_credit_bureau INT,
+        id_info_region INT,
+        id_puntuaciones_externas INT,
+        id_info_validada INT,
+        target SMALLINT,
+        code_gender VARCHAR(5),
+        flag_own_car BIT,
+        flag_own_realty VARCHAR(5),
+        cnt_children INT,
+        amt_income_total NUMERIC(10,2),
+        name_type_suite VARCHAR(30),
+        name_income_type VARCHAR(30),
+        name_education_type VARCHAR(30),
+        name_family_status VARCHAR(30),
+        name_housing_type VARCHAR(30),
+        days_birth INT,
+        days_employed INT,
+        days_registration NUMERIC(10,2),
+        days_id_publish INT,
+        own_car_age NUMERIC(8,2),
+        occupation_type VARCHAR(30),
+        cnt_fam_members NUMERIC(5,2),
+        organization_type VARCHAR(30),
+        days_last_phone_change NUMERIC(10,2),
+        FOREIGN KEY (id_info_building) REFERENCES info_building(id),
+        FOREIGN KEY (id_documentos) REFERENCES documentos(id),
+        FOREIGN KEY (id_req_credit_bureau) REFERENCES req_credit_bureau(id),
+        FOREIGN KEY (id_puntuaciones_externas) REFERENCES puntuaciones_externas(id),
+        FOREIGN KEY (id_info_validada) REFERENCES info_validada(id),
+        FOREIGN KEY (id_info_region) REFERENCES info_region(id)
+        )''')
+        cursor.execute('''
+        CREATE TABLE prestamo (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        name_contract_type VARCHAR(15),
+        amt_credit NUMERIC(12,2),
+        amt_annuity NUMERIC(12,2),
+        amt_goods_price NUMERIC(12,2),
+        week_day_appr_process_start VARCHAR(10),
+        hour_appr_process_start INT,
+        fondkapremont_mode VARCHAR(26),
+        emergencystate_mode BIT,
+        id_cliente INT,
+        FOREIGN KEY (id_cliente) REFERENCES cliente(id)
+        )''')
+def tabla_bureau(cursor):
+    cursor.execute('''
+            CREATE TABLE bureau (
+            id INT IDENTITY(1,1) PRIMARY KEY,
+            id_prestamo INT,
+            credit_active VARCHAR(11),
+            credit_currency VARCHAR(11),
+            days_credit INT,
+            credit_day_overdue INT,
+            days_credit_enddate NUMERIC(12,2),
+            days_enddate_fact NUMERIC(10,2),
+            amt_credit_max_overdue NUMERIC(10,2),
+            cnt_credit_prolong INT,
+            amt_credit_sum NUMERIC(12,2),
+            amt_credit_sum_debt NUMERIC(12,2),
+            amt_credit_sum_limit NUMERIC(12,2),
+            amt_credit_sum_overdue NUMERIC(6,2),
+            credit_type VARCHAR(18),
+            days_credit_update INT,
+            amt_annuity INT,
+            FOREIGN KEY (id_prestamo) REFERENCES prestamo(id)
+            )''')
+def tabla_bureau_balance(cursor):
+    cursor.execute('''
+    CREATE TABLE bureau_balance (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        id_bureau INT,
+        months_balance INT,
+        status VARCHAR(11),
+        FOREIGN KEY (id_bureau) REFERENCES bureau(id)
+        )''')
+def tabla_amounts(cursor):
+    cursor.execute('''
+    CREATE TABLE amounts (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    amt_balance NUMERIC(10,4),
+    amt_credit_limit_actual NUMERIC(10,4),
+    amt_drawings_atm_current NUMERIC(10,4),
+    amt_drawings_current NUMERIC(10,4),
+    amt_drawings_other_current NUMERIC(10,4),
+    amt_drawings_pos_current NUMERIC(10,4),
+    amt_inst_min_regularity NUMERIC(10,4),
+    amt_payment_current NUMERIC(10,4),
+    amt_payment_total_current NUMERIC(10,4),
+    amt_receivable_principal NUMERIC(10,4),
+    amt_recivable NUMERIC(10,4),
+    amt_total_receivable NUMERIC(10,4)
+    )''')
+def tabla_credit_card_balance(cursor):
+    cursor.execute('''
+    CREATE TABLE credit_card_balance (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    id_prestamo_previo INT,
+    id_prestamo_actual INT,
+    id_amounts INT,
+    mounths_balance NUMERIC(10,4),
+    cnt_drawings_atm_current NUMERIC(10,4),
+    cnt_drawings_current NUMERIC(10,4),
+    cnt_drawings_other_current NUMERIC(10,4),
+    cnt_drawings_pos_current NUMERIC(10,4),
+    cnt_instalment_mature_cum NUMERIC(10,4),
+    name_contract_status VARCHAR(11),
+    sk_dpd NUMERIC(10,4),
+    sk_dpd_def NUMERIC(10,4),
+    FOREIGN KEY (id_amounts) REFERENCES amounts(id)
+    )''')
+
+
+def tabla_installments_payments(cursor):
+    cursor.execute('''
+    CREATE TABLE installments_payments (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    id_prestamo_previo INT,
+    id_prestamo_actual INT,
+    num_instalment_version NUMERIC(6,2),
+    num_instalment_number INT,
+    days_instalment NUMERIC(9,2),
+    days_entry_payment NUMERIC(10,2),
+    amt_instalment NUMERIC(10,2),
+    amt_payment NUMERIC(10,2) 
+    )''')
+
+def tabla_pos_cash_balance(cursor):
+    cursor.execute('''
+    CREATE TABLE pos_cash_balance (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    id_prestamo_previo INT,
+    id_prestamo_actual INT,
+    months_balance INT,
+    cnt_instalment NUMERIC(5,2),
+    cnt_instalment_future NUMERIC(5,2),
+    name_contract_status VARCHAR(11),
+    sk_dpd INT,
+    sk_dpd_def INT
+    )''')   
+def tabla_previous_application(cursor):
+    cursor.execute('''
+        CREATE TABLE previus_application (
+        id INT IDENTITY(1,1) PRIMARY KEY,
+        id_prestamo_previo INT,
+        id_prestamo_actual INT,
+        name_contract_type VARCHAR(20),
+        amt_annuity NUMERIC(12,4),
+        amt_application NUMERIC(12,4),
+        amt_credit NUMERIC(12,2),
+        amt_down_payment NUMERIC(10,2),
+        amt_goods_price NUMERIC(12,4),
+        week_day_appr_process_start VARCHAR(12),
+        hour_appr_process_start INT,
+        flag_last_appl_per_contract BIT,
+        nflag_last_appl_in_day SMALLINT,
+        rate_down_payment NUMERIC(5,2),
+        rate_interest_primary NUMERIC(22,20),
+        rate_interest_privileged NUMERIC(22,20),
+        name_cash_loan_purpose VARCHAR(15),
+        name_contract_status VARCHAR(11),
+        days_decision INT,
+        name_payment_type VARCHAR(35),
+        code_reject_reason VARCHAR(15),
+        name_type_suite VARCHAR(25),
+        name_client_type VARCHAR(15),
+        name_goods_category VARCHAR(40),
+        name_portfolio VARCHAR(15),
+        name_product_type VARCHAR(15),
+        channel_type VARCHAR(25),
+        sellerplace_area NUMERIC(7,2),
+        name_seller_industry VARCHAR(25),
+        cnt_payment NUMERIC(6,2),
+        name_yield_group VARCHAR(15),
+        product_combination VARCHAR(30),
+        days_first_drawing NUMERIC(10,2),
+        days_first_due NUMERIC(10,2),
+        days_last_due_1st_version NUMERIC(10,2),
+        days_last_due NUMERIC(10,2),
+        days_termination NUMERIC(10,2),
+        nflag_insured_on_approval NUMERIC(4,2)
+        )''')
+def conexion_Test1(nombre_archivo):
+    server = 'OLMAN8K\\OLMANSQL'
+    database = 'TestProyecto'
+    trusted_connection = 'yes'
+
+    # Conexión a la base de datos
+    conn_str = f'Driver={{SQL Server}};Server={server};Database={database};Trusted_Connection={trusted_connection}'
+    df = pd.read_csv('C:\\Users\\Usuario\\OneDrive - Estudiantes ITCR\\Documentos\\IV_S_TEC\\BasesII\\FilesProject\\' + nombre_archivo + '.csv') 
+
+    try:
+        with pyodbc.connect(conn_str) as conn:
+            cursor = conn.cursor()
+            if nombre_archivo == "credit_card_balance":
+                tabla_amounts(cursor)
+                tabla_credit_card_balance(cursor)
+                insert_credit_card_balance(cursor,df)
+                # Inserta los datos
+                conn.commit()
+            elif nombre_archivo == "previous_application":
+                tabla_previous_application(cursor)
+                insert_previous_application(cursor, df)
+                conn.commit()
+            elif nombre_archivo == "POS_CASH_balance":
+                tabla_pos_cash_balance(cursor)
+                insert_pos_cash_balance(cursor, df)
+                conn.commit()
+            elif nombre_archivo == "installments_payments":
+                tabla_installments_payments(cursor)
+                insert_installments_payments(cursor, df)
+                conn.commit()
+            elif nombre_archivo == "application_train":
+                tablas_application_train(cursor)
+                insert_application_train(cursor, df)
+                conn.commit()
+            elif nombre_archivo == "bureau":
+                tabla_bureau(cursor)
+                insert_bureau(cursor, df)
+                conn.commit()
+            elif nombre_archivo == "bureau_balance":
+                tabla_bureau_balance(cursor)
+                insert_bureau_balance(cursor, df)
+                conn.commit()
+    except Exception as e:
+        print(f'Error: {e}')
+        conn.rollback()
+    finally:
+        cursor.close()
+        conn.close()
+
+conexion_Test1("application_train")
+conexion_Test1("bureau")
+conexion_Test1("bureau_balance")
+conexion_Test1("credit_card_balance")
+conexion_Test1("installments_payments")
+conexion_Test1("POS_CASH_balance")
+conexion_Test1("previous_application")
